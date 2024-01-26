@@ -15,7 +15,7 @@ func CNAME(host string) {
 		return // End CNAME function if err is exist 
     }
   // Return the CNAME Record if no error exist
-  fmt.Println("CNAME Record for", host, "is :", CNAME)
+  fmt.Printf("CNAME Record for %s --> %s\n", host, CNAME)
 	}
 	
 //The main function
