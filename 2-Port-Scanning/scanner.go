@@ -9,9 +9,21 @@ import (
 	"time"
 )
 
+var (
+	mu sync.Mutex
+)
+
 func worker(host string, ports, results chan int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for p := range ports {
+	for {
+		mu.Lock()
+		p, ok := <-ports
+		mu.Unlock()
+
+		if !ok {
+			return
+		}
+
 		addr := fmt.Sprintf("%s:%d", host, p)
 		conn, err := net.DialTimeout("tcp", addr, 5*time.Second)
 		if err != nil {
@@ -47,7 +59,9 @@ func main() {
 
 	go func() {
 		for p := *startPort; p < *endPort; p++ {
+			mu.Lock()
 			ports <- p
+			mu.Unlock()
 		}
 		close(ports)
 	}()
