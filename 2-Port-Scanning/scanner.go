@@ -13,17 +13,9 @@ var (
 	mu sync.Mutex
 )
 
-func worker(host string, ports, results chan int, wg *sync.WaitGroup) {
+func worker(host string, startPort, endPort int, results chan int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for {
-		mu.Lock()
-		p, ok := <-ports
-		mu.Unlock()
-
-		if !ok {
-			return
-		}
-
+	for p := startPort; p < endPort; p++ {
 		addr := fmt.Sprintf("%s:%d", host, p)
 		conn, err := net.DialTimeout("tcp", addr, 5*time.Second)
 		if err != nil {
@@ -39,7 +31,7 @@ func main() {
 	host := flag.String("host", "", "host to scan")
 	startPort := flag.Int("start", 1, "the start port to scan")
 	endPort := flag.Int("end", 1024, "host to scan")
-	workersCount := flag.Int("workers", 100, "number of workers")
+	workersCount := flag.Int("workers", 10, "number of workers")
 	flag.Parse()
 
 	if *host == "" {
@@ -47,24 +39,24 @@ func main() {
 		return
 	}
 
-	ports := make(chan int, 2*(*workersCount))
-	results := make(chan int, *workersCount)
+	portsPerWorker := (*endPort - *startPort) / *workersCount
+	remainingPorts := (*endPort - *startPort) % *workersCount
+
 	var openPorts []int
 	var wg sync.WaitGroup
+	results := make(chan int, *endPort-*startPort)
 
 	for i := 0; i < *workersCount; i++ {
 		wg.Add(1)
-		go worker(*host, ports, results, &wg)
-	}
-
-	go func() {
-		for p := *startPort; p < *endPort; p++ {
-			mu.Lock()
-			ports <- p
-			mu.Unlock()
+		start := *startPort + i*portsPerWorker
+		end := start + portsPerWorker
+		if i == *workersCount-1 {
+			// If it's the last worker, include the remaining ports
+			end += remainingPorts
 		}
-		close(ports)
-	}()
+
+		go worker(*host, start, end, results, &wg)
+	}
 
 	go func() {
 		wg.Wait()
