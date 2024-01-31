@@ -51,7 +51,6 @@ func main() {
 		start := *startPort + i*portsPerWorker
 		end := start + portsPerWorker
 		if i == *workersCount-1 {
-			// If it's the last worker, include the remaining ports
 			end += remainingPorts
 		}
 
