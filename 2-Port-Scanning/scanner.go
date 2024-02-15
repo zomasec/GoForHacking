@@ -1,3 +1,4 @@
+// package zscan
 package main
 
 import (
@@ -9,9 +10,6 @@ import (
 	"time"
 )
 
-var (
-	mu sync.Mutex
-)
 
 func worker(host string, startPort, endPort int, results chan int, wg *sync.WaitGroup) {
 	defer wg.Done()
@@ -22,7 +20,9 @@ func worker(host string, startPort, endPort int, results chan int, wg *sync.Wait
 			results <- 0
 			continue
 		}
-		conn.Close()
+		func (){if err := conn.Close; err != nil {
+			return 
+		}}()
 		results <- p
 	}
 }
